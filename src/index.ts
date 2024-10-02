@@ -33,7 +33,7 @@ console.info(
 window.customCards = window.customCards || [];
 window.customCards.push(...[
     {
-        type: 'tag-name',
+        type: 'expander-card',
         name: 'Expander Card',
         preview: true,
         description: 'Expander card'

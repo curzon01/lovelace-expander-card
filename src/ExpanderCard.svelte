@@ -1,5 +1,33 @@
+<script lang="ts" module>
+        export const defaults = {
+            'gap': '0.0em',
+            'expanded-gap': '0.6em',
+            'padding': '1em',
+            'clear': false,
+            'title': ' ',
+            'overlay-margin': '0.0em',
+            'child-padding': '0.0em',
+            'child-margin-top': '0.0em',
+            'button-background': 'transparent',
+            'expander-card-background': 'var(--ha-card-background,var(--card-background-color,#fff))',
+            'header-color': 'var(--primary-text-color,#fff)',
+            'arrow-color': 'var(--arrow-color,var(--primary-text-color,#fff))',
+            'expander-card-display': 'block',
+            'title-card-clickable': false,
+            'min-width-expanded': 0,
+            'max-width-expanded': 0
+        };
+</script>
+
 <!-- eslint-disable-next-line svelte/valid-compile -->
-<svelte:options tag="tag-name" />
+<svelte:options customElement={{
+    tag: 'expander-card',
+    extend: (customElementConstructor) => class extends customElementConstructor {
+        public setConfig(conf = {}) {
+            this.config = { ...defaults, ...conf };
+        };
+    }
+}}/>
 
 <script lang="ts">
     /* eslint-disable prettier/prettier */
@@ -8,10 +36,6 @@
     import type { HomeAssistant } from 'custom-card-helpers';
     import Card from './Card.svelte';
     import collapse from 'svelte-collapse';
-
-    // hack get reference to own component
-    import { get_current_component } from 'svelte/internal';
-    import type { ExpanderConfig } from './configtype';
     import { onMount } from 'svelte';
     const thisComponent = get_current_component();
 
@@ -25,43 +49,15 @@
     // eslint-disable-next-line no-undef-init
     export let hass: HomeAssistant | undefined = undefined;
 
-    const defaults = {
-        'gap': '0.0em',
-        'expanded-gap': '0.6em',
-        'padding': '1em',
-        'clear': false,
-        'title': ' ',
-        'overlay-margin': '0.0em',
-        'child-padding': '0.0em',
-        'child-margin-top': '0.0em',
-        'button-background': 'transparent',
-        'expander-card-background': 'var(--ha-card-background,var(--card-background-color,#fff))',
-        'header-color': 'var(--primary-text-color,#fff)',
-        'arrow-color': 'var(--arrow-color,var(--primary-text-color,#fff))',
-        'expander-card-display': 'block',
-        'title-card-clickable': false,
-        'min-width-expanded': 0,
-        'max-width-expanded': 0
-    };
+    export let config;
 
-    let config: ExpanderConfig = defaults;
-
-    // Home Assistant will call this with the config object!
-    // leave export let otherwise hass wil thro errors....
-    // eslint-disable-next-line svelte/no-unused-svelte-ignore
-    // svelte-ignore unused-export-let
-    export let setConfig = (conf = {}) => {
-        config = { ...defaults, ...conf };
-    };
+    let element: HTMLElement;
+    let touchPreventClick = false;
 
     onMount(() => {
-        isEditorMode = (thisComponent as HTMLElement).parentElement?.localName === 'hui-card-preview';
-        if (isEditorMode) {
-            open = true;
-        } else {
-            const minWidthExpanded = config['min-width-expanded'] as number;
-            const maxWidthExpanded = config['max-width-expanded'] as number;
-            const offsetWidth = document.body.offsetWidth;
+        const minWidthExpanded = config['min-width-expanded'];
+        const maxWidthExpanded = config['max-width-expanded'];
+        const offsetWidth = document.body.offsetWidth;
 
             if (minWidthExpanded && maxWidthExpanded) {
                 config.expanded = offsetWidth >= minWidthExpanded && offsetWidth <= maxWidthExpanded;
@@ -71,26 +67,10 @@
                 config.expanded = offsetWidth <= maxWidthExpanded;
             }
 
-            if (config.expanded !== undefined) {
-                setTimeout(() => (open = config.expanded as boolean), 100);
-            }
+        if (config.expanded !== undefined) {
+            setTimeout(() => (open = config.expanded), 100);
         }
-    });
 
-    // Hack add static method to compiled Card class
-    thisComponent.constructor.getConfigElement = () => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (window as any).ExpanderCardEditor = Editor;
-        return document.createElement('tag-name-editor');
-    };
-    thisComponent.constructor.getStubConfig = () => ({
-        ...defaults
-    });
-
-
-    let element: HTMLElement;
-    let touchPreventClick = false;
-    onMount(() => {
         if(isListenerAdded) {
             return;
         }
@@ -161,15 +141,16 @@
     {#if config['title-card']}
         <div id='id1' class={`title-card-header${config['title-card-button-overlay'] ? '-overlay' : ''}`}>
             <div id='id2' class="title-card-container" style="--title-padding:{config['title-card-padding']}" on:touchstart|passive={touchStart} on:touchmove|passive={touchMove} on:touchend={touchEnd}>
-                <Card {hass} config={config['title-card']} type={config['title-card'].type} />
+                <Card hass={hass} config={config['title-card']} type={config['title-card'].type} />
             </div>
             <button bind:this={element}
                 style="--overlay-margin:{config['overlay-margin']}; --button-background:{config[
                     'button-background'
                 ]}; --header-color:{config['header-color']};"
                 class={`header ripple${config['title-card-button-overlay'] ? ' header-overlay' : ''}${open ? ' open' : ' close'}`}
+                aria-label="Toggle button"
             >
-                <ha-icon style="--arrow-color:{config['arrow-color']}" icon="mdi:chevron-down" class={`ico${open ? ' flipped open' : 'close'}`} />
+                <ha-icon style="--arrow-color:{config['arrow-color']}" icon="mdi:chevron-down" class={`ico${open ? ' flipped open' : 'close'}`} ></ha-icon>
             </button>
         </div>
     {:else}
@@ -179,7 +160,7 @@
             style="--header-width:100%; --button-background:{config['button-background']};--header-color:{config['header-color']};"
         >
             <div class={`primary title${open ? ' open' : ' close'}`}>{config.title}</div>
-            <ha-icon style="--arrow-color:{config['arrow-color']}" icon="mdi:chevron-down" class={`ico${open ? ' flipped open' : ' close'}`} />
+            <ha-icon style="--arrow-color:{config['arrow-color']}" icon="mdi:chevron-down" class={`ico${open ? ' flipped open' : ' close'}`}></ha-icon>
         </button>
     {/if}
     {#if config.cards}
@@ -187,10 +168,10 @@
             style="--expander-card-display:{config['expander-card-display']};
              --gap:{open ? config['expanded-gap'] : config.gap}; --child-padding:{config['child-padding']}"
             class="children-container"
-            use:collapse={{ open, duration: 0.2, easing: 'ease' }}
+            use:collapse={{ open, duration: 0.3, easing: 'ease' }}
         >
             {#each config.cards as card (card)}
-                <Card {hass} config={card} type={card.type} marginTop={config['child-margin-top']}/>
+                <Card hass={hass} config={card} type={card.type} marginTop={config['child-margin-top']}/>
             {/each}
         </div>
     {/if}
