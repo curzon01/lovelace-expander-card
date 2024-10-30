@@ -23,6 +23,9 @@
 <svelte:options customElement={{
     tag: 'expander-card',
     extend: (customElementConstructor) => class extends customElementConstructor {
+        // re-declare props used in customClass.
+        public config!: ExpanderConfig;
+
         public setConfig(conf = {}) {
             this.config = { ...defaults, ...conf };
         };
@@ -35,24 +38,19 @@
 
     import type { HomeAssistant } from 'custom-card-helpers';
     import Card from './Card.svelte';
-    import collapse from 'svelte-collapse';
     import { onMount } from 'svelte';
-    const thisComponent = get_current_component();
+    import type { ExpanderConfig } from './configtype';
+    import { slide } from 'svelte/transition';
+    import { cubicOut } from 'svelte/easing';
 
-    let open = false;
+    const {
+        hass,
+        config = defaults
+    }: {hass: HomeAssistant; config: ExpanderConfig} = $props();
 
-    let isListenerAdded = false;
-
-    let isEditorMode = false;
-
-    // fix for #199
-    // eslint-disable-next-line no-undef-init
-    export let hass: HomeAssistant | undefined = undefined;
-
-    export let config;
-
-    let element: HTMLElement;
     let touchPreventClick = false;
+
+    let open = $state(false);
 
     onMount(() => {
         const minWidthExpanded = config['min-width-expanded'];
@@ -71,37 +69,17 @@
             setTimeout(() => (open = config.expanded), 100);
         }
 
-        if(isListenerAdded) {
-            return;
-        }
-        if (config['title-card-clickable']) {
-            if (element.parentElement) {
-                isListenerAdded = true;
-                element.parentElement.addEventListener('click', (event) => {
-                    if (touchPreventClick) {
-                        event.preventDefault();
-                        event.stopImmediatePropagation();
-                        touchPreventClick = false;
-                        return false;
-                    }
-                    open = !open;
-                });
-            }
-            return;
-        }
-        if (element.tagName === 'BUTTON') {
-            isListenerAdded = true;
-            element.addEventListener('click', (event) => {
-                if (touchPreventClick) {
-                    event.preventDefault();
-                    event.stopImmediatePropagation();
-                    touchPreventClick = false;
-                    return false;
-                }
-                open = !open;
-            });
-        }
     });
+
+    const buttonClick = (event: MouseEvent) => {
+        if (touchPreventClick) {
+            event.preventDefault();
+            event.stopImmediatePropagation();
+            touchPreventClick = false;
+            return false;
+        }
+        open = !open;
+    };
 
     let touchElement: HTMLElement | undefined;
     let isScrolling = false;
@@ -140,10 +118,13 @@
      --card-background:{open && config['expander-card-background-expanded'] ? config['expander-card-background-expanded']: config['expander-card-background']}">
     {#if config['title-card']}
         <div id='id1' class={`title-card-header${config['title-card-button-overlay'] ? '-overlay' : ''}`}>
-            <div id='id2' class="title-card-container" style="--title-padding:{config['title-card-padding']}" on:touchstart|passive={touchStart} on:touchmove|passive={touchMove} on:touchend={touchEnd}>
+            <div id='id2' class="title-card-container" style="--title-padding:{config['title-card-padding']}"
+                ontouchstart={touchStart} ontouchmove={touchMove} ontouchend={touchEnd}
+                onclick={config['title-card-clickable'] ? buttonClick : null}
+                role={config['title-card-clickable'] ? 'button' : undefined}>
                 <Card hass={hass} config={config['title-card']} type={config['title-card'].type} />
             </div>
-            <button bind:this={element}
+            <button onclick={buttonClick}
                 style="--overlay-margin:{config['overlay-margin']}; --button-background:{config[
                     'button-background'
                 ]}; --header-color:{config['header-color']};"
@@ -154,8 +135,7 @@
             </button>
         </div>
     {:else}
-        <button
-            bind:this={element}
+        <button onclick={buttonClick}
             class={`header${config['expander-card-background-expanded'] ? '' : ' ripple'}${open ? ' open' : ' close'}`}
             style="--header-width:100%; --button-background:{config['button-background']};--header-color:{config['header-color']};"
         >
@@ -163,12 +143,12 @@
             <ha-icon style="--arrow-color:{config['arrow-color']}" icon="mdi:chevron-down" class={`ico${open ? ' flipped open' : ' close'}`}></ha-icon>
         </button>
     {/if}
-    {#if config.cards}
+    {#if config.cards && open}
         <div
             style="--expander-card-display:{config['expander-card-display']};
              --gap:{open ? config['expanded-gap'] : config.gap}; --child-padding:{config['child-padding']}"
             class="children-container"
-            use:collapse={{ open, duration: 0.3, easing: 'ease' }}
+            transition:slide={{ duration: 300, easing: cubicOut }}
         >
             {#each config.cards as card (card)}
                 <Card hass={hass} config={card} type={card.type} marginTop={config['child-margin-top']}/>
