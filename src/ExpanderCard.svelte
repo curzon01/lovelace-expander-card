@@ -81,6 +81,12 @@
         open = !open;
     };
 
+    const buttonClickDiv = (event: MouseEvent) => {
+        if (event.currentTarget.classList.contains('title-card-container')) {
+            buttonClick(event);
+        }
+    };
+
     let touchElement: HTMLElement | undefined;
     let isScrolling = false;
     let startX = 0;
@@ -120,7 +126,7 @@
         <div id='id1' class={`title-card-header${config['title-card-button-overlay'] ? '-overlay' : ''}`}>
             <div id='id2' class="title-card-container" style="--title-padding:{config['title-card-padding']}"
                 ontouchstart={touchStart} ontouchmove={touchMove} ontouchend={touchEnd}
-                onclick={config['title-card-clickable'] ? buttonClick : null}
+                onclick={config['title-card-clickable'] ? buttonClickDiv : null}
                 role={config['title-card-clickable'] ? 'button' : undefined}>
                 <Card hass={hass} config={config['title-card']} type={config['title-card'].type} />
             </div>
