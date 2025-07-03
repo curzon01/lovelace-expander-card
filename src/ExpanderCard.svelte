@@ -43,6 +43,13 @@
     import type { ExpanderConfig } from './configtype';
     import { slide } from 'svelte/transition';
     import { cubicOut } from 'svelte/easing';
+    import collapse from 'svelte-collapse';
+
+    // hack get reference to own component
+    import { get_current_component } from 'svelte/internal';
+    import type { ExpanderConfig } from './configtype';
+    import { onMount } from 'svelte';
+    const thisComponent = get_current_component();
 
     const {
         hass,
@@ -54,6 +61,11 @@
 
     const configId = config['storgage-id'];
     const lastStorageOpenStateId = 'expander-open-' + configId;
+    let isEditorMode = false;
+
+    // fix for #199
+    // eslint-disable-next-line no-undef-init
+    export let hass: HomeAssistant | undefined = undefined;
 
 
     function toggleOpen() {
@@ -75,6 +87,13 @@
         const minWidthExpanded = config['min-width-expanded'];
         const maxWidthExpanded = config['max-width-expanded'];
         const offsetWidth = document.body.offsetWidth;
+        isEditorMode = (thisComponent as HTMLElement).parentElement?.localName === 'hui-card-preview';
+        if (isEditorMode) {
+            open = true;
+        } else {
+            const minWidthExpanded = config['min-width-expanded'] as number;
+            const maxWidthExpanded = config['max-width-expanded'] as number;
+            const offsetWidth = document.body.offsetWidth;
 
             if (minWidthExpanded && maxWidthExpanded) {
                 config.expanded = offsetWidth >= minWidthExpanded && offsetWidth <= maxWidthExpanded;
@@ -82,6 +101,43 @@
                 config.expanded = offsetWidth >= minWidthExpanded;
             } else if (maxWidthExpanded) {
                 config.expanded = offsetWidth <= maxWidthExpanded;
+            }
+
+            if (config.expanded !== undefined) {
+                setTimeout(() => (open = config.expanded as boolean), 100);
+            }
+        }
+    });
+
+    // Hack add static method to compiled Card class
+    thisComponent.constructor.getConfigElement = () => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (window as any).ExpanderCardEditor = Editor;
+        return document.createElement('tag-name-editor');
+    };
+    thisComponent.constructor.getStubConfig = () => ({
+        ...defaults
+    });
+
+
+    let element: HTMLElement;
+    let touchPreventClick = false;
+    onMount(() => {
+        if(isListenerAdded) {
+            return;
+        }
+        if (config['title-card-clickable']) {
+            if (element.parentElement) {
+                isListenerAdded = true;
+                element.parentElement.addEventListener('click', (event) => {
+                    if (touchPreventClick) {
+                        event.preventDefault();
+                        event.stopImmediatePropagation();
+                        touchPreventClick = false;
+                        return false;
+                    }
+                    open = !open;
+                });
             }
 
         if (configId !== undefined) {
