@@ -15,7 +15,8 @@
             'expander-card-display': 'block',
             'title-card-clickable': false,
             'min-width-expanded': 0,
-            'max-width-expanded': 0
+            'max-width-expanded': 0,
+            'icon': 'mdi:chevron-down'
         };
 </script>
 
@@ -48,9 +49,27 @@
         config = defaults
     }: {hass: HomeAssistant; config: ExpanderConfig} = $props();
 
-    let touchPreventClick = false;
-
+    let touchPreventClick = $state(false);
     let open = $state(false);
+
+    const configId = config['storgage-id'];
+    const lastStorageOpenStateId = 'expander-open-' + configId;
+
+
+    function toggleOpen() {
+        setOpenState(!open);
+    }
+
+    function setOpenState(openState: boolean) {
+        open = openState;
+        if (configId !== undefined) {
+            try {
+                localStorage.setItem(lastStorageOpenStateId, open ? 'true' : 'false');
+            } catch (e) {
+                console.error(e);
+            }
+        }
+    }
 
     onMount(() => {
         const minWidthExpanded = config['min-width-expanded'];
@@ -65,10 +84,28 @@
                 config.expanded = offsetWidth <= maxWidthExpanded;
             }
 
-        if (config.expanded !== undefined) {
-            setTimeout(() => (open = config.expanded), 100);
+        if (configId !== undefined) {
+            try {
+                const storageValue = localStorage.getItem(lastStorageOpenStateId);
+                if(storageValue === null){
+                    // first time, set the state from config
+                    if (config.expanded !== undefined) {
+                        setOpenState(config.expanded);
+                    }
+                }
+                else {
+                    // last state is stored in local storage
+                    open = storageValue ? storageValue === 'true' : open;
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        }else{
+            // first time, set the state from config
+            if (config.expanded !== undefined) {
+                setOpenState(config.expanded);
+            }
         }
-
     });
 
     const buttonClick = (event: MouseEvent) => {
@@ -78,7 +115,7 @@
             touchPreventClick = false;
             return false;
         }
-        open = !open;
+        toggleOpen();
     };
 
     const buttonClickDiv = (event: MouseEvent) => {
@@ -108,11 +145,10 @@
 
     const touchEnd = (event: TouchEvent) => {
         if (!isScrolling && touchElement === event.target && config['title-card-clickable']) {
-            open = !open;
+            toggleOpen();
         }
         touchElement = undefined;
         touchPreventClick = true;
-        setTimeout(() => touchPreventClick = false, 300);
     };
 </script>
 
@@ -137,7 +173,7 @@
                 class={`header ripple${config['title-card-button-overlay'] ? ' header-overlay' : ''}${open ? ' open' : ' close'}`}
                 aria-label="Toggle button"
             >
-                <ha-icon style="--arrow-color:{config['arrow-color']}" icon="mdi:chevron-down" class={`ico${open ? ' flipped open' : 'close'}`} ></ha-icon>
+                <ha-icon style="--arrow-color:{config['arrow-color']}" icon={config.icon} class={`ico${open ? ' flipped open' : 'close'}`} ></ha-icon>
             </button>
         </div>
     {:else}
@@ -146,15 +182,15 @@
             style="--header-width:100%; --button-background:{config['button-background']};--header-color:{config['header-color']};"
         >
             <div class={`primary title${open ? ' open' : ' close'}`}>{config.title}</div>
-            <ha-icon style="--arrow-color:{config['arrow-color']}" icon="mdi:chevron-down" class={`ico${open ? ' flipped open' : ' close'}`}></ha-icon>
+            <ha-icon style="--arrow-color:{config['arrow-color']}" icon={config.icon} class={`ico${open ? ' flipped open' : ' close'}`}></ha-icon>
         </button>
     {/if}
-    {#if config.cards && open}
+    {#if config.cards}
         <div
-            style="--expander-card-display:{config['expander-card-display']};
+            style="--expander-card-display:{open ? config['expander-card-display']: 'none'};
              --gap:{open ? config['expanded-gap'] : config.gap}; --child-padding:{config['child-padding']}"
             class="children-container"
-            transition:slide={{ duration: 300, easing: cubicOut }}
+            transition:slide={{ duration: 500, easing: cubicOut }}
         >
             {#each config.cards as card (card)}
                 <Card hass={hass} config={card} type={card.type} marginTop={config['child-margin-top']}/>

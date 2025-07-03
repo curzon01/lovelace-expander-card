@@ -51,6 +51,7 @@ Yaml Options:
 | ------------------------- | -------- | ------------- | ---------------------- | ----------------------------------------------------- |
 | type                      | string   | **Required**  | `custom:expander-card` | Type of the card.                                     |
 | title                     | string   | Empty         | *                      | Title (Not displayed if using Title-Card)             |
+| icon                      | string   | mdi:chevron-down         | mdi icon shortcut                      | Icon in button           |
 | clear                     | boolean  | _false_       | true\|false            | Remove Background                                     |
 | expanded                  | boolean  | _false_       | true\|false            | Start expanded                                        |
 | min-width-expanded        | number   | 0             | number                 | Min screen width (px) to be expanded on start (use with start expanded above)                                     |
@@ -70,6 +71,7 @@ Yaml Options:
 | title-card-button-overlay | boolean  | _false_       | true\|false            | Overlay expand button over title-card                 |
 | title-card-clickable      | boolean  | _false_       | true\|false            | Should the complete diff clickable?                   |
 | overlay-margin            | string   | _0.0em_       | css-size               | Margin from top right of expander button (if overlay) |
+| storgage-id               | string   | **optional**  | *                      | Save last expander state in local browser storage     |
 | cards                     | object[] | **optional**  | LovelaceCardConfig[]   | Child cards to show when expanded                     |
 | expander-card-display     | string   | block         | css-display            | Layout/Display of the card                            |
 
@@ -236,6 +238,30 @@ Expander-Card is not available in [HACS][hacs] (Home Assistant Community Store) 
             - url: /local/expander-card.js
               type: module
         ```
+
+
+## FAQ
+
+### Issue after upgrade to HA 2025.6 
+There are a couple of issues after upgrading to HA 2025.6 
+See [forum](https://community.home-assistant.io/t/expander-accordion-collapsible-card/738817/56?u=melled) and [issue](https://github.com/MelleD/lovelace-expander-card/issues/506) 
+a) For the view type [sections](https://www.home-assistant.io/blog/2024/03/04/dashboard-chapter-1/) `cards` is not working anymore. You have to rename it to `sections`.
+Before
+ ```yaml
+views:
+  - title: MyView
+    path: my-view
+    cards: ...
+```
+
+Now
+ ```yaml
+views:
+  - title: MyView
+    path: my-view
+    sections: ...
+```
+
 ## Support
 
 Clone and create a PR to help make the card even better.

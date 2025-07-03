@@ -45,7 +45,7 @@ limitations under the License.
         if (!container) {
             return;
         }
-
+        // eslint-disable-next-line svelte/no-dom-manipulating
         container.replaceWith(el);
         container = el;
         loading = false;

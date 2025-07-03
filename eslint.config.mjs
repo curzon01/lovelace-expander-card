@@ -49,6 +49,7 @@ export default tseslint.config(
         },
         rules: {
             'prettier/prettier': 'off',
+            '@typescript-eslint/no-unused-expressions': 'off',
             '@typescript-eslint/no-namespace': 'off',
             '@typescript-eslint/adjacent-overload-signatures': 'error',
             '@typescript-eslint/array-type': 'error',

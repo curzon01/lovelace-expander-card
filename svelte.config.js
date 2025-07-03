@@ -6,7 +6,9 @@ const config = {
 	// Consult https://kit.svelte.dev/docs/integrations#preprocessors
 	// for more information about preprocessors
     preprocess: vitePreprocess({
-        sourceMap: false
+        sourceMap: false,
+	postcss: true,
+    	script: true
     }),
     compilerOptions: {
         // runes: true,
